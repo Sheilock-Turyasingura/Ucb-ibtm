@@ -589,7 +589,39 @@ function navButton(label, w, onClick, x) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(sz, sz), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false }));
   m.renderOrder = 20; m.position.x = -1.06; m.userData.onClick = () => goHome(); m.userData.setHover = h => draw(h); nav.add(m); clickables.push(m);
 }
-function goHome() { yaw = 0; pitch = 0; show(0); }
+// HOME = reset for the next guest: back to the opening, film rewound, a 10-second countdown
+// (time to fit the headset), then the view re-centres on the new guest and everything starts from the top.
+let countdown = null, countCard = null;
+function makeCountCard(n) {
+  const c = card({ w: 2.2, flag: true, flagW: 120, kicker: 'Welcome to Uganda', title: n > 0 ? `Starting in ${n}` : 'Enjoy the journey', titleSize: 76, small: 'Look straight ahead and relax. The experience begins in a moment.', align: 'center', bg: 'rgba(5,8,7,0.9)' });
+  if (!countCard) { countCard = new THREE.Mesh(new THREE.PlaneGeometry(c.w, c.h), new THREE.MeshBasicMaterial({ map: canvasTex(c.cv), transparent: true, depthTest: false })); countCard.renderOrder = 30; scene.add(countCard); }
+  else { countCard.material.map.dispose(); countCard.material.map = canvasTex(c.cv); countCard.geometry.dispose(); countCard.geometry = new THREE.PlaneGeometry(c.w, c.h); }
+  // keep it in front of whoever is wearing the headset
+  const cm = renderer.xr.isPresenting ? renderer.xr.getCamera() : camera; const hp = new THREE.Vector3(); cm.getWorldPosition(hp); cm.getWorldDirection(dir);
+  const fy = Math.atan2(-dir.x, -dir.z); countCard.position.set(hp.x - Math.sin(fy) * 2.2, hp.y - 0.05, hp.z - Math.cos(fy) * 2.2); countCard.rotation.set(0, fy, 0);
+  document.getElementById('note').textContent = n > 0 ? `Next guest: starting in ${n} s` : '';
+}
+function cancelCountdown(startNow) {
+  if (!countdown) return; clearInterval(countdown); countdown = null;
+  if (countCard) { scene.remove(countCard); countCard = null; } document.getElementById('note').textContent = '';
+  if (startNow) { film.currentTime = 0; startFilm(); }
+}
+async function goHome() {
+  cancelCountdown(false);
+  yaw = 0; pitch = 0;
+  film.pause(); try { film.currentTime = 0; } catch (e) {} filmLastTime = -1;
+  await show(0, true);
+  let n = 10; makeCountCard(n);
+  countdown = setInterval(async () => {
+    n -= 1;
+    if (n > 0) { makeCountCard(n); return; }
+    clearInterval(countdown); countdown = null; if (countCard) { scene.remove(countCard); countCard = null; } document.getElementById('note').textContent = '';
+    recenterPending = true;               // face the new guest
+    film.currentTime = 0; startFilm();    // film from the beginning
+    await show(0, true);                  // opening plays fresh
+  }, 1000);
+}
+let recenterPending = false;
 navButton('◀  BACK', 0.42, () => step(-1), -0.71); navButton('◇  MENU', 0.4, () => go('menu'), -0.26); navButton('NEXT  ▶', 0.42, () => step(1), 0.19);
 const soundBtn = navButton('SOUND: OFF', 0.52, () => toggleSound(), 0.69);
 function toggleSound() { film.muted = !film.muted; startFilm(); soundBtn.userData.setLabel(film.muted ? 'SOUND: OFF' : 'SOUND: ON'); }
@@ -597,14 +629,15 @@ const counter = (() => { const cv = document.createElement('canvas'); cv.width =
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; nav.add(m);
   return s => { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); c.font = `600 22px ${F.body}`; c.letterSpacing = '5px'; c.fillStyle = MUTE; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.toUpperCase(), cv.width / 2, cv.height / 2); t.needsUpdate = true; }; })();
 nav.position.set(0, 0.92, -1.9); nav.rotation.x = -0.35;
-let navYaw = 0;
+let navYaw = 0, navFollow = false; const headPos = new THREE.Vector3();
 
 // ---------------------------------------------------------------- scene switching
 const fader = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide, transparent: true, opacity: 0, depthTest: false }));
 fader.renderOrder = 99; camera.add(fader);
 let cur = -1, busy = false;
-async function show(i) {
-  if (busy || i < 0 || i >= S.length || i === cur) return; busy = true;
+async function show(i, force = false) {
+  if (busy || i < 0 || i >= S.length || (i === cur && !force)) return; busy = true;
+  if (!force && countdown) cancelCountdown(true);
   await tween(380, k => fader.material.opacity = Math.max(fader.material.opacity, k));
   scene.remove(stage); stage.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   stage = new THREE.Group(); scene.add(stage); sceneClickables = []; tweens.length = 0;
@@ -673,8 +706,19 @@ renderer.setAnimationLoop(() => {
   if (!xr) { camera.rotation.set(pitch, yaw, 0); }
   // nav follows where the viewer faces (only when they turn well away)
   const cam = xr ? renderer.xr.getCamera() : camera; cam.getWorldDirection(dir); const fy = Math.atan2(-dir.x, -dir.z);
-  let dy = fy - navYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); if (Math.abs(dy) > 0.9) navYaw += dy * 0.06;
-  nav.position.set(-Math.sin(navYaw) * 1.9, 0.92, -Math.cos(navYaw) * 1.9); nav.rotation.set(0, navYaw, 0); nav.rotateX(-0.35);
+  cam.getWorldPosition(headPos); if (!xr) headPos.set(0, 1.6, 0);
+  if (recenterPending && xr) { // rotate/shift the rig so the current head pose becomes "home": facing the content, standing on the deck centre
+    recenterPending = false;
+    const R0 = rig.rotation.y, hl = headPos.clone().sub(rig.position).applyAxisAngle(new THREE.Vector3(0, 1, 0), -R0);
+    const R1 = R0 - fy; rig.rotation.y = R1; const back = hl.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), R1); rig.position.set(-back.x, 0, -back.z);
+    navYaw = 0; navFollow = false;
+  } else if (recenterPending) recenterPending = false;
+  // menu bar: follows your head (yaw only) when you turn more than ~25°, settles in front, slightly below eye level
+  let dy = fy - navYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  if (Math.abs(dy) > 0.45) navFollow = true; if (Math.abs(dy) < 0.04) navFollow = false;
+  if (navFollow) navYaw += dy * Math.min(1, dt * 5);
+  const ND = 1.65, NY = Math.max(0.55, headPos.y - 0.68);
+  nav.position.set(headPos.x - Math.sin(navYaw) * ND, NY, headPos.z - Math.cos(navYaw) * ND); nav.rotation.set(0, navYaw, 0); nav.rotateX(-Math.atan2(headPos.y - NY, ND));
   if (xr) {
     let any = null;
     for (const c of ctrls) { tmpM.identity().extractRotation(c.matrixWorld); org.setFromMatrixPosition(c.matrixWorld); dir.set(0, 0, -1).applyMatrix4(tmpM);
@@ -696,7 +740,7 @@ counter('');
 const start = Math.max(0, S.findIndex(s => '#' + s.id === location.hash));
 await show(start);
 const ld = document.getElementById('loader'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 900);
-window.__ready = true; window.__go = i => show(i); window.__S = S; window.__scene = scene; window.__look = (y, p = 0) => { yaw = y; pitch = p; };
+window.__ready = true; window.__go = i => show(i); window.__S = S; window.__scene = scene; window.__look = (y, p = 0) => { yaw = y; pitch = p; }; window.__film = film;
 </script>
 </body>
 </html>
