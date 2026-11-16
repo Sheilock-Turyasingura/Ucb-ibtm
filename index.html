@@ -495,8 +495,18 @@ const film = document.createElement('video');
 Object.assign(film, { src: 'mice.mp4', muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
 film.setAttribute('playsinline', ''); film.setAttribute('muted', '');
 const filmGroup = new THREE.Group(); filmGroup.visible = false; scene.add(filmGroup);
+const filmCanvas = document.createElement('canvas'), filmCtx = filmCanvas.getContext('2d', { alpha: false });
+let filmTex = null, filmLastTime = -1;
+function updateFilmFrame() {
+  if (!filmTex || film.readyState < 2 || film.currentTime === filmLastTime) return;
+  filmLastTime = film.currentTime; filmCtx.drawImage(film, 0, 0, filmCanvas.width, filmCanvas.height); filmTex.needsUpdate = true;
+}
 {
-  const tx = new THREE.VideoTexture(film); tx.colorSpace = THREE.SRGBColorSpace; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.generateMipmaps = false; tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = -1; tx.offset.x = 1;
+  // Stereo-safe video: copy each decoded frame into a canvas ONCE per frame, before both eyes render.
+  // (A live VideoTexture can be re-uploaded between the left- and right-eye passes on Quest, which flickers one lens.)
+  filmCanvas.width = 1280; filmCanvas.height = 720;
+  const tx = new THREE.CanvasTexture(filmCanvas); tx.colorSpace = THREE.SRGBColorSpace; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.generateMipmaps = false; tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = -1; tx.offset.x = 1;
+  filmTex = tx;
   const ARC = 84 * D2R, R = 8.2, h = ARC * R / (16 / 9), c = Math.PI; // centred directly behind the start view
   const scr = new THREE.Mesh(new THREE.CylinderGeometry(R, R, h, 96, 1, true, Math.PI - c - ARC / 2, ARC), new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide }));
   scr.position.y = 0.35 + h / 2; filmGroup.add(scr);
@@ -595,6 +605,7 @@ vrbtn.onclick = async () => {
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock(); const tmpQ = new THREE.Quaternion(), tmpM = new THREE.Matrix4(), dir = new THREE.Vector3(), org = new THREE.Vector3();
 renderer.setAnimationLoop(() => {
+  updateFilmFrame();
   const dt = Math.min(clock.getDelta(), 0.05), now = performance.now();
   for (let i = tweens.length - 1; i >= 0; i--) { const tw = tweens[i]; const k = (now - tw.t0) / tw.dur; if (k < 0) continue; tw.fn(tw.e(Math.min(1, k))); if (k >= 1) { tweens.splice(i, 1); tw.res(); } }
   S[cur]?.update?.(dt);
