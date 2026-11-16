@@ -713,12 +713,8 @@ renderer.setAnimationLoop(() => {
     const R1 = R0 - fy; rig.rotation.y = R1; const back = hl.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), R1); rig.position.set(-back.x, 0, -back.z);
     navYaw = 0; navFollow = false;
   } else if (recenterPending) recenterPending = false;
-  // menu bar: follows your head (yaw only) when you turn more than ~25°, settles in front, slightly below eye level
-  let dy = fy - navYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-  if (Math.abs(dy) > 0.45) navFollow = true; if (Math.abs(dy) < 0.04) navFollow = false;
-  if (navFollow) navYaw += dy * Math.min(1, dt * 5);
-  const ND = 1.65, NY = Math.max(0.55, headPos.y - 0.68);
-  nav.position.set(headPos.x - Math.sin(navYaw) * ND, NY, headPos.z - Math.cos(navYaw) * ND); nav.rotation.set(0, navYaw, 0); nav.rotateX(-Math.atan2(headPos.y - NY, ND));
+  // menu bar: fixed in place at the bottom of the presentation, straight ahead (it no longer follows the head)
+  nav.position.set(0, 0.95, -2.05); nav.rotation.set(-0.3, 0, 0);
   if (xr) {
     let any = null;
     for (const c of ctrls) { tmpM.identity().extractRotation(c.matrixWorld); org.setFromMatrixPosition(c.matrixWorld); dir.set(0, 0, -1).applyMatrix4(tmpM);
