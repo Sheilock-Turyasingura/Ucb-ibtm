@@ -54,39 +54,88 @@ renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x030605);
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 300);
+scene.background = new THREE.Color(0x0b0c10);
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 400);
 camera.position.set(0, 1.6, 0); camera.rotation.order = 'YXZ';
 const rig = new THREE.Group(); rig.add(camera); scene.add(rig);
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
-// ---------------------------------------------------------------- environment
+// ---------------------------------------------------------------- environment: a Ugandan game park at dusk
 {
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(120, 48, 24), new THREE.ShaderMaterial({
+  // dusk sky: warm savanna horizon fading to a starry night overhead
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(160, 48, 24), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
     vertexShader: 'varying vec3 p; void main(){ p = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'varying vec3 p; void main(){ float h = clamp(p.y*1.4+.15,0.,1.); vec3 c = mix(vec3(.045,.085,.075), vec3(.008,.014,.012), h); float g = exp(-pow(p.y*7.,2.))*.10; c += vec3(.85,.71,.42)*g*.35; gl_FragColor = vec4(c,1.); }'
+    fragmentShader: 'varying vec3 p; void main(){ float h = clamp(p.y,0.,1.); vec3 hor = vec3(.86,.52,.28), mid = vec3(.20,.17,.22), top = vec3(.018,.026,.045); vec3 c = mix(hor, mid, smoothstep(0.,.16,h)); c = mix(c, top, smoothstep(.12,.6,h)); if (p.y < 0.) c = vec3(.10,.08,.06); gl_FragColor = vec4(c,1.); }'
   }));
   scene.add(sky);
-  const N = 2200, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const N = 1800, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const u = Math.random() * 2 - 1, t = Math.random() * Math.PI * 2, y = Math.abs(u) * 0.95 + 0.05;
-    const r = Math.sqrt(1 - y * y);
-    pos.set([Math.cos(t) * r * 100, y * 100, Math.sin(t) * r * 100], i * 3);
-    const w = Math.random() < 0.2 ? [0.95, 0.82, 0.55] : [0.85, 0.9, 0.9]; const b = 0.35 + Math.random() * 0.65;
-    col.set(w.map(v => v * b), i * 3);
+    const t = Math.random() * Math.PI * 2, y = 0.3 + Math.random() * 0.7, r = Math.sqrt(1 - y * y);
+    pos.set([Math.cos(t) * r * 140, y * 140, Math.sin(t) * r * 140], i * 3);
+    const b = (0.3 + Math.random() * 0.7) * Math.min(1, (y - 0.3) * 2.5); col.set([0.9 * b, 0.9 * b, 0.95 * b], i * 3);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 0.35, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.9, depthWrite: false })));
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 96), new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false,
-    vertexShader: 'varying vec2 v; void main(){ v = position.xy; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'varying vec2 v; void main(){ float r = length(v); float ring = smoothstep(.02,0.,abs(r-2.4))*.55 + smoothstep(.015,0.,abs(r-2.55))*.25 + smoothstep(.03,0.,abs(fract(r/3.)-.5)*3.)*.05; vec3 c = vec3(.012,.02,.017) + vec3(.85,.71,.42)*ring; float a = (1.-smoothstep(10.,40.,r)); gl_FragColor = vec4(c, a); }'
-  }));
-  floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 0.45, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false })));
+  // savanna grass texture (procedural, tiling)
+  const gc = document.createElement('canvas'); gc.width = gc.height = 1024; const x = gc.getContext('2d');
+  x.fillStyle = '#6f6a35'; x.fillRect(0, 0, 1024, 1024);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  for (let i = 0; i < 60; i++) { const r = rnd(40, 160), cx = rnd(0, 1024), cy = rnd(0, 1024); const gr = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    const c = [['#8a7a45', .55], ['#5a6230', .5], ['#7d6a3c', .45], ['#4f5a2a', .5]][i % 4]; gr.addColorStop(0, c[0]); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = c[1]; x.fillStyle = gr;
+    for (const dx of [-1024, 0, 1024]) for (const dy of [-1024, 0, 1024]) { x.save(); x.translate(dx, dy); x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); x.restore(); } }
+  x.globalAlpha = 1;
+  for (let i = 0; i < 14000; i++) { const px = rnd(0, 1024), py = rnd(0, 1024), l = rnd(6, 18), a = rnd(-0.5, 0.5);
+    x.strokeStyle = ['#9c8b4e', '#b39d5a', '#5c6631', '#7f7a3d', '#a48d4c', '#4c5527'][i % 6]; x.globalAlpha = rnd(0.35, 0.8); x.lineWidth = rnd(1, 2.2);
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.sin(a) * l, py - Math.cos(a) * l); x.stroke(); }
+  x.globalAlpha = 1;
+  const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace; gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(70, 70); gt.anisotropy = 16;
+  const ground = new THREE.Mesh(new THREE.RingGeometry(0.001, 150, 96, 60), new THREE.MeshLambertMaterial({ map: gt }));
+  ground.rotation.x = -Math.PI / 2; scene.add(ground);
+  // safari-lodge viewing deck under the viewer
+  const dc = document.createElement('canvas'); dc.width = dc.height = 512; const d = dc.getContext('2d');
+  for (let i = 0; i < 16; i++) { d.fillStyle = ['#6b4a2e', '#7a5634', '#5f4229', '#734f30'][i % 4]; d.fillRect(0, i * 32, 512, 32); d.fillStyle = 'rgba(0,0,0,.35)'; d.fillRect(0, i * 32 + 30, 512, 2);
+    for (let k = 0; k < 40; k++) { d.fillStyle = 'rgba(30,18,8,.18)'; d.fillRect(Math.random() * 512, i * 32 + Math.random() * 30, Math.random() * 60 + 10, 1); } }
+  const dt = new THREE.CanvasTexture(dc); dt.colorSpace = THREE.SRGBColorSpace; dt.wrapS = dt.wrapT = THREE.RepeatWrapping; dt.repeat.set(3, 3); dt.anisotropy = 16;
+  const deck = new THREE.Mesh(new THREE.CylinderGeometry(2.55, 2.6, 0.12, 64), [new THREE.MeshLambertMaterial({ color: 0x4a3220 }), new THREE.MeshLambertMaterial({ map: dt }), new THREE.MeshLambertMaterial({ color: 0x4a3220 })]);
+  deck.position.y = 0.06; scene.add(deck);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.48, 0.018, 8, 96), new THREE.MeshBasicMaterial({ color: 0xD8B66B })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.125; scene.add(ring);
+  // acacia trees, termite mounds and distant hills
+  const bark = new THREE.MeshLambertMaterial({ color: 0x3b2c1f }), leaf = new THREE.MeshLambertMaterial({ color: 0x46552a, flatShading: true }), leaf2 = new THREE.MeshLambertMaterial({ color: 0x55622f, flatShading: true });
+  function acacia(px, pz, s) {
+    const t = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.16 * s, 2.6 * s, 7), bark); trunk.position.y = 1.3 * s; trunk.rotation.z = (Math.random() - 0.5) * 0.25; t.add(trunk);
+    for (const [ox, oy, oz, w] of [[0, 2.7, 0, 1], [0.9, 2.45, 0.3, 0.6], [-0.8, 2.5, -0.4, 0.55]]) {
+      const c = new THREE.Mesh(new THREE.SphereGeometry(1, 9, 5), Math.random() < 0.5 ? leaf : leaf2); c.scale.set(2.1 * w * s, 0.38 * w * s, 1.8 * w * s); c.position.set(ox * s, oy * s, oz * s); t.add(c);
+      const br = new THREE.Mesh(new THREE.CylinderGeometry(0.03 * s, 0.06 * s, 1.2 * s, 5), bark); br.position.set(ox * 0.5 * s, (oy - 0.55) * s, oz * 0.5 * s); br.rotation.z = -ox * 0.5; br.rotation.x = oz * 0.5; t.add(br);
+    }
+    t.position.set(px, 0, pz); t.rotation.y = Math.random() * 6; scene.add(t);
+  }
+  const placed = [];
+  for (let i = 0; i < 46; i++) {
+    const a = Math.random() * Math.PI * 2, r = 11 + Math.pow(Math.random(), 0.7) * 55;
+    const px = Math.sin(a) * r, pz = -Math.cos(a) * r;
+    if (placed.some(([qx, qz]) => Math.hypot(px - qx, pz - qz) < 5)) continue; placed.push([px, pz]);
+    acacia(px, pz, 0.8 + Math.random() * 0.9);
+  }
+  const mud = new THREE.MeshLambertMaterial({ color: 0x7a4f2e, flatShading: true });
+  for (const [a, r, h] of [[62, 6.5, 1.1], [-118, 7.5, 1.5], [150, 9, 0.9], [-40, 12, 1.3]]) {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.45 * h, h, 7), mud); m.position.set(Math.sin(a * D2R) * r, h / 2, -Math.cos(a * D2R) * r); scene.add(m);
+  }
+  const hillM = new THREE.MeshBasicMaterial({ color: 0x2c2a2a });
+  for (let i = 0; i < 36; i++) {
+    const a = i / 36 * Math.PI * 2 + Math.random() * 0.1, r = 105 + Math.random() * 25;
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), hillM);
+    hl.scale.set(14 + Math.random() * 18, 3 + Math.random() * 9, 10); hl.position.set(Math.sin(a) * r, -0.5, -Math.cos(a) * r); hl.rotation.y = -a; scene.add(hl);
+  }
+  // instanced grass tufts around the deck
+  const tuft = new THREE.ConeGeometry(0.022, 0.2, 3); tuft.translate(0, 0.1, 0);
+  const tm = new THREE.InstancedMesh(tuft, new THREE.MeshLambertMaterial({ color: 0x9a8a4a }), 2200); const o = new THREE.Object3D();
+  for (let i = 0; i < 2200; i++) { const a = Math.random() * 6.283, r = 2.9 + Math.random() * 14; o.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r); o.rotation.set((Math.random() - .5) * .3, Math.random() * 6, (Math.random() - .5) * .3); o.scale.setScalar(0.6 + Math.random() * 1.1); o.updateMatrix(); tm.setMatrixAt(i, o.matrix); }
+  scene.add(tm);
 }
-scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-const sun = new THREE.DirectionalLight(0xfff2dd, 1.6); sun.position.set(-3, 4, 4); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffe2b8, 0x3a2c18, 1.4));
+const sun = new THREE.DirectionalLight(0xffc68a, 1.4); sun.position.set(-20, 12, -30); scene.add(sun);
 
 // ---------------------------------------------------------------- textures
 const loader = new THREE.TextureLoader(); const TEX = {};
@@ -447,11 +496,11 @@ Object.assign(film, { src: 'mice.mp4', muted: true, loop: true, playsInline: tru
 film.setAttribute('playsinline', ''); film.setAttribute('muted', '');
 const filmGroup = new THREE.Group(); filmGroup.visible = false; scene.add(filmGroup);
 {
-  const tx = new THREE.VideoTexture(film); tx.colorSpace = THREE.SRGBColorSpace; tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = -1; tx.offset.x = 1;
+  const tx = new THREE.VideoTexture(film); tx.colorSpace = THREE.SRGBColorSpace; tx.minFilter = THREE.LinearFilter; tx.magFilter = THREE.LinearFilter; tx.generateMipmaps = false; tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = -1; tx.offset.x = 1;
   const ARC = 84 * D2R, R = 8.2, h = ARC * R / (16 / 9), c = Math.PI; // centred directly behind the start view
   const scr = new THREE.Mesh(new THREE.CylinderGeometry(R, R, h, 96, 1, true, Math.PI - c - ARC / 2, ARC), new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide }));
   scr.position.y = 0.35 + h / 2; filmGroup.add(scr);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.05, R + 0.05, h + 0.12, 96, 1, true, Math.PI - c - ARC / 2 - 0.006, ARC + 0.012), new THREE.MeshBasicMaterial({ color: 0x8a7240, side: THREE.BackSide }));
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.6, R + 0.6, h + 0.5, 96, 1, true, Math.PI - c - ARC / 2 - 0.03, ARC + 0.06), new THREE.MeshBasicMaterial({ color: 0x14100b, side: THREE.BackSide }));
   rim.position.y = scr.position.y; filmGroup.add(rim);
   const lab = sprite('UGANDA CONVENTION BUREAU · MICE FILM', { size: 30, color: GOLD, scale: 0.004 }); lab.position.set(0, 0.12, R - 0.4); filmGroup.add(lab);
 }
@@ -575,7 +624,7 @@ counter('');
 const start = Math.max(0, S.findIndex(s => '#' + s.id === location.hash));
 await show(start);
 const ld = document.getElementById('loader'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 900);
-window.__ready = true; window.__go = i => show(i); window.__S = S;
+window.__ready = true; window.__go = i => show(i); window.__S = S; window.__scene = scene;
 </script>
 </body>
 </html>
