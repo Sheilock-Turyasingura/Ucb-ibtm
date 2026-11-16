@@ -1,8 +1,30 @@
 {
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "Permissions-Policy", "value": "xr-spatial-tracking=(self)" },
-      { "key": "Cache-Control", "value": "public, max-age=300" }
-    ] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "xr-spatial-tracking=(self)"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
+      "source": "/mice.mp4",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "Content-Type",
+          "value": "video/mp4"
+        }
+      ]
+    }
   ]
 }

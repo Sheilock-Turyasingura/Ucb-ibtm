@@ -31,7 +31,7 @@
 <div id="ui">
   <div id="brand">UGANDA <span>· IBTM WORLD 2026 · VR PRESENTATION</span></div>
   <div id="note"></div>
-  <div id="hint">Drag to look around · ← → or a presenter clicker to move · Click the buttons and tiles</div>
+  <div id="hint">Drag to look around · ← → or clicker to move · F: face the Uganda film · S: film sound</div>
   <button class="btn" id="fsbtn">FULL SCREEN</button>
   <button class="btn" id="vrbtn">ENTER VR</button>
 </div>
@@ -248,6 +248,7 @@ const S = [
       const g = await makeGlobe(1.05); g.position.set(0, 1.55, -3.6); g.rotation.set(0.12, faceRotY(UG[0]) + 1.6, 0); stage.add(g); reveal(g, 0, 2000);
       st.update = dt => { g.rotation.y += dt * 0.12; };
       addCard({ w: 4, kicker: 'IBTM World 2026  ·  Barcelona', title: 'UGANDA', titleSize: 150, subtitle: 'A journey beyond the ordinary', subSize: 44, align: 'center', bg: false, shadow: true }, 0, 4.2, 3.3, 900);
+      addCard({ w: 1.5, kicker: 'Look behind you', small: 'The Uganda Convention Bureau MICE film plays on the big screen throughout the journey.', pad: 30 }, -33, 3.0, 1.45, 1600);
     } },
   { id: 'arrival', title: 'Arrival', async build(st) {
       const g = await makeGlobe(1.05); g.position.set(0, 1.55, -3.6); g.rotation.set(0.12, faceRotY(UG[0]) - 2.2, 0); stage.add(g);
@@ -433,18 +434,40 @@ const S = [
     } },
 ];
 
+// ---------------------------------------------------------------- the UCB MICE film: a cinema screen behind the viewer, playing across every scene
+const film = document.createElement('video');
+Object.assign(film, { src: 'mice.mp4', muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
+film.setAttribute('playsinline', ''); film.setAttribute('muted', '');
+const filmGroup = new THREE.Group(); filmGroup.visible = false; scene.add(filmGroup);
+{
+  const tx = new THREE.VideoTexture(film); tx.colorSpace = THREE.SRGBColorSpace; tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = -1; tx.offset.x = 1;
+  const ARC = 84 * D2R, R = 8.2, h = ARC * R / (16 / 9), c = Math.PI; // centred directly behind the start view
+  const scr = new THREE.Mesh(new THREE.CylinderGeometry(R, R, h, 96, 1, true, Math.PI - c - ARC / 2, ARC), new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide }));
+  scr.position.y = 0.35 + h / 2; filmGroup.add(scr);
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.05, R + 0.05, h + 0.12, 96, 1, true, Math.PI - c - ARC / 2 - 0.006, ARC + 0.012), new THREE.MeshBasicMaterial({ color: 0x8a7240, side: THREE.BackSide }));
+  rim.position.y = scr.position.y; filmGroup.add(rim);
+  const lab = sprite('UGANDA CONVENTION BUREAU · MICE FILM', { size: 30, color: GOLD, scale: 0.004 }); lab.position.set(0, 0.12, R - 0.4); filmGroup.add(lab);
+}
+film.addEventListener('loadeddata', () => { filmGroup.visible = true; });
+film.addEventListener('error', () => { filmGroup.visible = false; });
+const startFilm = () => film.play().catch(() => {});
+startFilm();
+
 // ---------------------------------------------------------------- navigation bar (follows your gaze lazily)
 const nav = new THREE.Group(); scene.add(nav);
 const NPX = 560;
 function navButton(label, w, onClick, x) {
+  let lbl = label;
   const cv = document.createElement('canvas'); cv.width = w * NPX; cv.height = 0.16 * NPX; const c = cv.getContext('2d');
   const draw = hov => { c.clearRect(0, 0, cv.width, cv.height); c.fillStyle = hov ? 'rgba(18,56,46,.98)' : 'rgba(8,13,11,.86)'; rr(c, 2, 2, cv.width - 4, cv.height - 4, cv.height / 2 - 2); c.fill(); c.strokeStyle = hov ? GOLD : 'rgba(216,182,107,.55)'; c.lineWidth = 3; c.stroke();
-    c.font = `700 30px ${F.body}`; c.letterSpacing = '6px'; c.fillStyle = hov ? GOLD : IVORY; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(label, cv.width / 2, cv.height / 2 + 2); };
+    c.font = `700 30px ${F.body}`; c.letterSpacing = '6px'; c.fillStyle = hov ? GOLD : IVORY; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lbl, cv.width / 2, cv.height / 2 + 2); };
   draw(false); const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.16), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false }));
-  m.renderOrder = 20; m.position.x = x; m.userData.onClick = onClick; m.userData.setHover = h => { draw(h); t.needsUpdate = true; }; nav.add(m); clickables.push(m); return m;
+  m.renderOrder = 20; m.position.x = x; m.userData.onClick = onClick; m.userData.setHover = h => { draw(h); t.needsUpdate = true; }; m.userData.setLabel = l => { lbl = l; draw(false); t.needsUpdate = true; }; nav.add(m); clickables.push(m); return m;
 }
-navButton('◀  BACK', 0.5, () => step(-1), -0.62); navButton('◇  MENU', 0.44, () => go('menu'), 0); navButton('NEXT  ▶', 0.5, () => step(1), 0.62);
+navButton('◀  BACK', 0.44, () => step(-1), -0.78); navButton('◇  MENU', 0.42, () => go('menu'), -0.3); navButton('NEXT  ▶', 0.44, () => step(1), 0.18);
+const soundBtn = navButton('SOUND: OFF', 0.56, () => toggleSound(), 0.74);
+function toggleSound() { film.muted = !film.muted; startFilm(); soundBtn.userData.setLabel(film.muted ? 'SOUND: OFF' : 'SOUND: ON'); }
 const counter = (() => { const cv = document.createElement('canvas'); cv.width = 1.6 * NPX; cv.height = 0.1 * NPX; const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; nav.add(m);
   return s => { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); c.font = `600 22px ${F.body}`; c.letterSpacing = '5px'; c.fillStyle = MUTE; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.toUpperCase(), cv.width / 2, cv.height / 2); t.needsUpdate = true; }; })();
@@ -476,7 +499,7 @@ function pick(origin, dir) { ray.set(origin, dir); const hits = ray.intersectObj
 function setHover(o) { if (o === hovered) return; if (hovered) { hovered.userData.setHover?.(false); const hg = hovered.userData.hover; if (hg) hg.scale.setScalar(1); } hovered = o; if (o) { o.userData.setHover?.(true); const hg = o.userData.hover; if (hg) hg.scale.setScalar(1.05); } renderer.domElement.style.cursor = o ? 'pointer' : 'grab'; }
 function screenPick(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const hits = ray.intersectObjects([...clickables, ...sceneClickables], false); return hits[0]?.object || null; }
 const el = renderer.domElement;
-el.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; el.setPointerCapture(e.pointerId); });
+el.addEventListener('pointerdown', e => { startFilm(); drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; el.setPointerCapture(e.pointerId); });
 el.addEventListener('pointermove', e => {
   if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true;
     yaw = drag.yaw + dx * 0.0035; pitch = Math.max(-1.2, Math.min(1.2, drag.pitch + dy * 0.0035)); }
@@ -488,6 +511,8 @@ addEventListener('keydown', e => {
   if (['ArrowLeft', 'PageUp', 'Backspace', 'ArrowUp'].includes(e.key)) { e.preventDefault(); step(-1); }
   if (e.key === 'm' || e.key === 'M' || e.key === 'Escape') go('menu');
   if (e.key === 'h' || e.key === 'H') { yaw = 0; pitch = 0; }
+  if (e.key === 'f' || e.key === 'F') { yaw = Math.abs(yaw - Math.PI) < 0.5 ? 0 : Math.PI; pitch = 0.1; }
+  if (e.key === 's' || e.key === 'S') toggleSound();
 });
 document.getElementById('fsbtn').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} };
 
