@@ -13,6 +13,7 @@
   #brand{position:absolute;left:22px;top:18px;font-size:11px;letter-spacing:.32em;color:#D8B66B;font-weight:700}
   #brand span{color:#A9B3AD;font-weight:400}
   #brand i{display:inline-block;width:24px;height:16px;margin-right:9px;vertical-align:-2px;border:1px solid rgba(247,245,239,.35);background:#000 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAAAwCAYAAACynDzrAAAELUlEQVR4Xu2aQUwcVRjH/2922BoKsmyXYQE3bmTZlbZKadJED5oSDWqUgxcvbcWDGpsYYpNKPZootY1ejGgPPbiposgBm0hSoybWNhGLCiUppWEtbQHZdncPVFoouzPvM/OmCqbKHia+Ken7JS/ZTN63881//u97b/MtAxhB8Z9oSpvVUQIpgdyhHKQc5A7loCLowUpYxSbdybDMGZh3sgDFYJSBOiiugq4WmDooukLtYspB7tCVh1ZHt64y7k5j9zBOEJsFAZwDTAOYDpDG3H+5S9jFJ9Z5dFBkYNyEmTexFKpDPpIAN6pRWl4FPjsJmhjGXblZ6H4dpOmOeh6g8zn7fXlAIY/r5SH4d7yOmradOHvoPfDafpQl2nDPpn4U5nPIDPRg4bN3sX4+B5T4PUgS0EQNkjyYlcd8JI6qD79B/KW9CITD+N70o/3NDL468DUKs+cRqK1B/OW9Ys58JCFiZOdp30+6exi3cK08hOp3+lC9qUmsnFQqhbGhQZQHYoi9+D4CifsBuzJyiDnV+3tFjB0rG+kCmfkC/Ds7Ud34gCMCgOi9UYSNDWjavBlPP9X6z3Jji7TxQfh3dIpY2UgVyHbAjVAdws/sWn5OBvT19WF07g80JBrh89lb2K0yhNt24UaoVrqLNB8DZA3NKkCLN6PMMBz32EIQ0P9lP+rrozh/6Tec/PEkstnscr2x4RAxWnyr+A5Z+dr30bN5edsnLQE+I3qLbYkIR/uOYttD2+D3l+DMubO49t0UHnl0OwJ1ESGQbfUlI4qFJVtXeTnrraMS1zUBz1820fzXCrKfUwP2de7D4LODGB0exUeHD2Nr8G5sPP4FLhzyoebgJwg/vF1EHLls4si47TyJOTuNQ1kD1Nr6JAmsFYOIUhMpan+hnTTdR+ENQepuMmgyDhprf5xM7oTYsc6ilJWvaKpKvRmFQlV0JX1lWaSbD2+aJo2PjVNLSwu99fZ+OnXiBzq+pYLOtT9GnJOIsWNlC2Sf4SXCkMtlkUwm0flGpyjSi4uL6OjogGEY4JyjsbERpetLEdI1XCJC2XO7wRjwcTIpYv91i/t/kekgYVkKVgbp9Mhp4aJcJkfdH3TTwvUFmpmaoZ5Pe8T17PQ0jX17THy259oxst1z838LsgVyRGqINdDwryPOUiOidDpNvZ/30p7X9lB6Nv339ZHhEYrFGjwSR3oNWvkyQBUVQerqOkDT07N06qdfaPcrr9LAwDG6MDlFU1O/U1fXQTHHG+c4ubJgJfOs7cMtQqEARCIGmpu3oP6+GPzr/EilJjA09DNmZrIoKYFzmvWI26IvZllAwQSIA0SApkEI4/N5pMoKVF+sCKovVgSpv+bXIkog5SB3qL5YsSJtzXnfF7udYRdbveqLrQ10ftWjvtgaQdUgtYu5Q52DlIPcoRykHOSOPwFEAux0SuliBQAAAABJRU5ErkJggg==') center/cover no-repeat}
+  #trial{position:absolute;left:50%;top:48px;transform:translateX(-50%);font-size:11px;letter-spacing:.12em;color:#F7F5EF;background:rgba(40,24,4,.9);border:1px solid #F2A900;padding:7px 14px;border-radius:18px;white-space:nowrap}#trial b{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#F2A900;color:#1a1206;margin-right:8px}#trial span{color:#F2C14E;font-weight:700}#trial.expired{border-color:#E2463A;background:rgba(70,10,10,.92)}#trial.expired b{background:#E2463A}
   #credit{position:absolute;right:18px;bottom:58px;font-size:10px;letter-spacing:.18em;color:#A9B3AD}#credit b{color:#D8B66B;font-weight:700}
   #hint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);font-size:12px;color:#A9B3AD;letter-spacing:.05em;
         background:rgba(6,9,10,.6);padding:8px 14px;border-radius:20px;white-space:nowrap}
@@ -33,6 +34,7 @@
 <div id="ui">
   <div id="brand"><i></i>UGANDA <span>· IBTM WORLD 2026 · VR PRESENTATION</span></div>
   <div id="note"></div>
+  <div id="trial"></div>
   <div id="credit">BUILT BY <b>EVENT FIRM AFRICA</b></div>
   <div id="hint">Drag to look around · ← → or clicker to move · F: face the Uganda film · S: film sound</div>
   <button class="btn" id="fsbtn">FULL SCREEN</button>
@@ -624,6 +626,38 @@ async function goHome() {
 let recenterPending = false;
 navButton('◀  BACK', 0.42, () => step(-1), -0.71); navButton('◇  MENU', 0.4, () => go('menu'), -0.26); navButton('NEXT  ▶', 0.42, () => step(1), 0.19);
 const soundBtn = navButton('SOUND: OFF', 0.52, () => toggleSound(), 0.69);
+
+// ---------------------------------------------------------------- trial notice: 48-hour Meta Quest trial, live countdown to expiry
+const TRIAL_EXPIRY = Date.parse('2026-11-17T14:49:00+01:00'); // 2:49 pm, Barcelona time
+const trialEl = document.getElementById('trial');
+const trial = (() => {
+  const W = 1.12, H = 0.42, cv = document.createElement('canvas'); cv.width = W * NPX; cv.height = H * NPX; const c = cv.getContext('2d'), t = canvasTex(cv);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false }));
+  m.renderOrder = 21; m.position.set(1.55, 0.06, 0); nav.add(m);
+  return { draw(pulse) {
+    const left = TRIAL_EXPIRY - Date.now(), expired = left <= 0, w = cv.width, h = cv.height;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = expired ? 'rgba(70,10,10,.94)' : 'rgba(40,24,4,.92)'; rr(c, 3, 3, w - 6, h - 6, 26); c.fill();
+    c.strokeStyle = expired ? '#E2463A' : `rgba(242,169,0,${0.55 + 0.45 * pulse})`; c.lineWidth = 5; c.stroke();
+    // exclamation triangle
+    const cx = 70, cy = 78, r = 44; c.fillStyle = expired ? '#E2463A' : '#F2A900'; c.beginPath(); c.moveTo(cx, cy - r); c.lineTo(cx + r * 1.05, cy + r * 0.8); c.lineTo(cx - r * 1.05, cy + r * 0.8); c.closePath(); c.fill();
+    c.fillStyle = '#1a1206'; c.font = `900 50px ${F.body}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('!', cx, cy + 10);
+    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    c.fillStyle = expired ? '#FF8C80' : '#F2C14E'; c.font = `700 21px ${F.body}`; c.letterSpacing = '4px';
+    c.fillText(expired ? 'TRIAL EXPIRED' : '48-HOUR TRIAL · META QUEST', 135, 56); c.letterSpacing = '0px';
+    let main;
+    if (expired) main = 'Service deactivated';
+    else { const sec = Math.floor(left / 1000), hh = Math.floor(sec / 3600), mm = Math.floor(sec % 3600 / 60), ss = sec % 60; main = `Expires in ${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`; }
+    c.fillStyle = IVORY; c.font = `700 40px ${F.body}`; c.fillText(main, 135, 108);
+    c.fillStyle = '#E7DCC8'; c.font = `400 20px ${F.body}`;
+    const lines = expired ? ['Contact your hosting service provider', 'to reactivate Quest hosting.']
+                          : ['Expires today at 2:49 pm. Contact your hosting service', 'provider to reactivate Quest hosting, otherwise the', 'service will be deactivated at 2:49 pm.'];
+    lines.forEach((l, i) => c.fillText(l, 30, 158 + i * 28));
+    t.needsUpdate = true;
+    if (trialEl) { trialEl.className = expired ? 'expired' : ''; trialEl.innerHTML = `<b>!</b> ${expired ? 'TRIAL EXPIRED · Service deactivated · contact your hosting service provider to reactivate Quest hosting' : `48-HOUR TRIAL · expires today at 2:49 pm · <span>${main.replace('Expires in ', '')}</span> left · contact your hosting service provider to reactivate Quest hosting`}`; }
+  } };
+})();
+trial.draw(1); setInterval(() => trial.draw((Math.sin(Date.now() / 300) + 1) / 2), 1000);
 function toggleSound() { film.muted = !film.muted; startFilm(); soundBtn.userData.setLabel(film.muted ? 'SOUND: OFF' : 'SOUND: ON'); }
 const counter = (() => { const cv = document.createElement('canvas'); cv.width = 1.6 * NPX; cv.height = 0.1 * NPX; const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; nav.add(m);
