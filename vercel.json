@@ -14,7 +14,7 @@
       ]
     },
     {
-      "source": "/mice.mp4",
+      "source": "/(.*).mp4",
       "headers": [
         {
           "key": "Cache-Control",

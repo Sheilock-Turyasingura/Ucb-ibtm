@@ -682,7 +682,7 @@ async function close360() {
   try { history.replaceState(null, '', '#' + (S[cur]?.id || '')); } catch (e) {}
   tween(650, k => fader.material.opacity = 1 - k, 120);
 }
-v360.addEventListener('ended', () => close360()); window.__open360 = open360; window.__close360 = close360;
+v360.addEventListener('ended', () => close360()); v360.addEventListener('error', () => { if (theatreOn) { close360(); note('The 360° film could not load here. It plays on the hosted site.'); } }); window.__open360 = open360; window.__close360 = close360;
 function targets() { return theatreOn ? theatreClickables : [...clickables, ...sceneClickables]; }
 const counter = (() => { const cv = document.createElement('canvas'); cv.width = 1.6 * NPX; cv.height = 0.1 * NPX; const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; nav.add(m);
