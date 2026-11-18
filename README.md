@@ -13,7 +13,7 @@ Import this repository into Vercel. No build command is needed: choose the **Oth
 `mice.mp4` is the Uganda Convention Bureau MICE film. It plays muted and looping on the big screen behind the viewer's starting position, and keeps playing across every scene. Turn it on or off with the SOUND button or the S key; F turns to face the screen on desktop.
 
 
-## VR Films folder
-The opening scene has a **VR FILMS** tile that opens a gallery of films stored in `videos/`.
+## VR Gallery
+The **GALLERY** button on the menu bar opens category folders (MICE Venues, Safari & Wildlife, Adventure & Sport, Landscapes, Culture & Heritage, Events); each folder lists its films from `videos/`. Each film's `folder` field in the `FILMS` list decides where it appears.
 - `kind: '360'` films (equirectangular 2:1) surround the viewer; `kind: 'flat'` videos play on a large screen.
 - To add a film: put the mp4 in `videos/`, add a 16:9 thumbnail, and add one line to the `FILMS` list in `index.html` (or ask Event Firm Africa).

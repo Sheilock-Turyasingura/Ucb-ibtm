@@ -349,10 +349,6 @@ const S = [
         place(pole, -33, 5.4, 0); stage.add(pole); reveal(pole, 300, 1500);
         const u = st.update; st.update = dt => { u?.(dt); fm.uniforms.t.value += dt; fm.uniforms.o.value = fm.opacity ?? 1; };
       }
-      { // the VR FILMS folder: one tile on the right, mirroring the flag
-        const t = await tile(`▶  VR FILMS (${FILMS.length})`, '360° films & video', 1.2, 0.675, 'i_thumb_folder', () => openFilms());
-        place(t, 31, 3.0, 1.6); stage.add(t); reveal(t, 1800);
-      }
       addCard({ w: 1.5, kicker: 'Look behind you', small: 'The Uganda Convention Bureau MICE film plays on the big screen throughout the journey.', pad: 30 }, -30, 3.0, 1.3, 1600);
     } },
   { id: 'arrival', title: 'Arrival', async build(st) {
@@ -629,6 +625,7 @@ async function goHome() {
 let recenterPending = false;
 navButton('◀  BACK', 0.42, () => step(-1), -0.71); navButton('◇  MENU', 0.4, () => go('menu'), -0.26); navButton('NEXT  ▶', 0.42, () => step(1), 0.19);
 const soundBtn = navButton('SOUND: OFF', 0.52, () => toggleSound(), 0.69);
+const galleryBtn = navButton('▦  GALLERY', 0.5, () => openGallery(), 1.25);
 function toggleSound() { film.muted = !film.muted; startFilm(); soundBtn.userData.setLabel(film.muted ? 'SOUND: OFF' : 'SOUND: ON'); }
 
 // ---------------------------------------------------------------- VR FILMS folder: a gallery of 360° films and flat videos, opened from the opening scene.
@@ -636,12 +633,21 @@ function toggleSound() { film.muted = !film.muted; startFilm(); soundBtn.userDat
 //   kind '360'  = equirectangular 2:1 film, the viewer stands inside it
 //   kind 'flat' = ordinary video, shown on a large screen in a dark room
 const FILMS = [
-  { id: 'lions',  title: 'Lions 360°',       sub: '360° · Nat Geo', kind: '360',  src: 'videos/lions360.mp4',  thumb: 'i_thumb_lions', audio: true },
-  { id: 'forest', title: 'Forest Road 360°', sub: '360° film',                       kind: '360',  src: 'videos/forest360.mp4', thumb: 'i_thumb_forest' },
-  { id: 'lagoon', title: 'Island Lagoon',    sub: 'Video',             kind: 'flat', src: 'videos/lagoon.mp4',    thumb: 'i_thumb_lagoon', w: 1080, h: 1920, loop: true },
-  { id: 'fort',   title: 'Hilltop Fort',     sub: 'Video',                kind: 'flat', src: 'videos/fort.mp4',      thumb: 'i_thumb_fort',   w: 1920, h: 1080 },
-  { id: 'city',   title: 'City Plaza',       sub: 'Video',             kind: 'flat', src: 'videos/city.mp4',      thumb: 'i_thumb_city',   w: 1080, h: 1920 },
-  { id: 'track',  title: 'Park Track',       sub: 'Video',             kind: 'flat', src: 'videos/track.mp4',     thumb: 'i_thumb_track',  w: 1080, h: 1920, loop: true },
+  { id: 'lions',  title: 'Lions 360°',       sub: '360° · Nat Geo', kind: '360',  src: 'videos/lions360.mp4',  thumb: 'i_thumb_lions', audio: true, folder: 'wildlife' },
+  { id: 'forest', title: 'Forest Road 360°', sub: '360° film',                       kind: '360',  src: 'videos/forest360.mp4', thumb: 'i_thumb_forest', folder: 'landscapes' },
+  { id: 'lagoon', title: 'Island Lagoon',    sub: 'Video',             kind: 'flat', src: 'videos/lagoon.mp4',    thumb: 'i_thumb_lagoon', w: 1080, h: 1920, loop: true, folder: 'landscapes' },
+  { id: 'fort',   title: 'Hilltop Fort',     sub: 'Video',                kind: 'flat', src: 'videos/fort.mp4',      thumb: 'i_thumb_fort',   w: 1920, h: 1080, folder: 'culture' },
+  { id: 'city',   title: 'City Plaza',       sub: 'Video',             kind: 'flat', src: 'videos/city.mp4',      thumb: 'i_thumb_city',   w: 1080, h: 1920, folder: 'events' },
+  { id: 'track',  title: 'Park Track',       sub: 'Video',             kind: 'flat', src: 'videos/track.mp4',     thumb: 'i_thumb_track',  w: 1080, h: 1920, loop: true, folder: 'adventure' },
+];
+// gallery folders (each film above names its folder). An empty folder shows "in production".
+const FOLDERS = [
+  { id: 'venues',     title: 'MICE Venues',        thumb: 'h_speke' },
+  { id: 'wildlife',   title: 'Safari & Wildlife',  thumb: 'gorilla' },
+  { id: 'adventure',  title: 'Adventure & Sport',  thumb: 'rafting' },
+  { id: 'landscapes', title: 'Landscapes',         thumb: 'murchison' },
+  { id: 'culture',    title: 'Culture & Heritage', thumb: 't_culture' },
+  { id: 'events',     title: 'Events',             thumb: 'expo' },
 ];
 const theatre = new THREE.Group(); theatre.visible = false; scene.add(theatre);
 const vfilm = document.createElement('video');
@@ -663,41 +669,61 @@ const panel360 = new THREE.Group(); theatre.add(panel360); panel360.position.set
 const theatreClickables = [];
 function detach(m) { nav.remove(m); clickables.splice(clickables.indexOf(m), 1); return m; }
 function toTheatre(m) { detach(m); panel360.add(m); theatreClickables.push(m); return m; }
-toTheatre(navButton('◀  BACK TO FILMS', 0.8, () => toGallery(), -0.5));
+toTheatre(navButton('◀  BACK TO GALLERY', 0.9, () => toGallery(), -0.55));
 const pauseBtn = toTheatre(navButton('PAUSE', 0.36, () => { if (vfilm.paused) { vfilm.play().catch(() => {}); pauseBtn.userData.setLabel('PAUSE'); } else { vfilm.pause(); pauseBtn.userData.setLabel('PLAY'); } }, 0.2));
 const mute360 = toTheatre(navButton('SOUND: ON', 0.5, () => { vfilm.muted = !vfilm.muted; mute360.userData.setLabel(vfilm.muted ? 'SOUND: OFF' : 'SOUND: ON'); }, 0.69));
 const label360 = (() => { const cv = document.createElement('canvas'); cv.width = 1.8 * NPX; cv.height = 0.1 * NPX; const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; panel360.add(m);
   return s => { const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); c.font = `600 22px ${F.body}`; c.letterSpacing = '5px'; c.fillStyle = MUTE; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.toUpperCase(), cv.width / 2, cv.height / 2); t.needsUpdate = true; }; })();
-// the gallery ("folder") stands in the game park, in place of the slides
+// the GALLERY stands in the game park, in place of the slides: a screen of folders, then the films inside a folder
 const gallery = new THREE.Group(); gallery.visible = false; scene.add(gallery);
-let galleryClickables = [], galleryBuilt = null;
-function buildGallery() {
-  if (galleryBuilt) return galleryBuilt;
-  galleryBuilt = (async () => {
-    const saved = sceneClickables; sceneClickables = [];
-    const head = card({ w: 2.6, flag: true, flagW: 110, kicker: 'Uganda  ·  IBTM World 2026', title: 'VR FILMS', titleSize: 72, small: 'Choose a film. The 360° films surround you, so look all around.', align: 'center', bg: 'rgba(5,8,7,0.82)' });
-    const hm = new THREE.Mesh(new THREE.PlaneGeometry(head.w, head.h), new THREE.MeshBasicMaterial({ map: canvasTex(head.cv), transparent: true, depthWrite: false })); hm.renderOrder = 5;
-    gallery.add(place(hm, 0, 3.9, 3.72));
-    for (const [k, f] of FILMS.entries()) {
-      const t = await tile(`▶  ${f.title}`, f.sub, 1.05, 0.59, f.thumb, () => playFilm(k));
-      gallery.add(place(t, (k % 3 - 1) * 22, 3.6, 2.55 - Math.floor(k / 3) * 1.12));
-    }
-    const back = detach(navButton('◀  BACK TO PRESENTATION', 1.06, () => closeFilms(), 0));
-    back.position.set(0, 0.95, -2.05); back.rotation.set(-0.3, 0, 0); gallery.add(back);
-    galleryClickables = [...sceneClickables, back]; sceneClickables = saved;
-  })();
-  return galleryBuilt;
+let galleryView = null, galleryClickables = [], galleryFolder = null, galleryPage = 0, galleryToken = 0;
+const PER_PAGE = 6;
+async function buildGalleryView() {
+  const token = ++galleryToken, saved = sceneClickables; sceneClickables = [];
+  const g = new THREE.Group(), folder = FOLDERS.find(f => f.id === galleryFolder);
+  const items = folder ? FILMS.map((f, k) => ({ f, k })).filter(x => x.f.folder === folder.id) : FOLDERS;
+  const pages = Math.max(1, Math.ceil(items.length / PER_PAGE)); galleryPage = Math.min(galleryPage, pages - 1);
+  const count = id => FILMS.filter(f => f.folder === id).length;
+  const head = card({ w: 2.6, flag: true, flagW: 110, kicker: folder ? 'VR Gallery' : 'Uganda  ·  VR Gallery', title: folder ? folder.title : 'VR GALLERY', titleSize: 68,
+    small: folder && !items.length ? 'Films in production.' : folder ? `${items.length} film${items.length === 1 ? '' : 's'}${pages > 1 ? `  ·  page ${galleryPage + 1} of ${pages}` : ''}. The 360° films surround you, so look all around.` : 'Choose a folder.', align: 'center', bg: 'rgba(5,8,7,0.82)' });
+  const hm = new THREE.Mesh(new THREE.PlaneGeometry(head.w, head.h), new THREE.MeshBasicMaterial({ map: canvasTex(head.cv), transparent: true, depthWrite: false })); hm.renderOrder = 5;
+  g.add(place(hm, 0, 3.9, 3.72));
+  const slice = items.slice(galleryPage * PER_PAGE, galleryPage * PER_PAGE + PER_PAGE);
+  for (const [j, it] of slice.entries()) {
+    const t = folder ? await tile(`▶  ${it.f.title}`, it.f.sub, 1.05, 0.59, it.f.thumb, () => playFilm(it.k))
+                     : await tile(it.title, count(it.id) ? `${count(it.id)} film${count(it.id) === 1 ? '' : 's'}` : 'In production', 1.05, 0.59, it.thumb, () => openFolder(it.id));
+    const row = Math.floor(j / 3), inRow = Math.min(3, slice.length - row * 3); // centre short rows
+    g.add(place(t, (j % 3 - (inRow - 1) / 2) * 22, 3.6, 2.55 - row * 1.12));
+  }
+  if (folder && !items.length) {
+    const c = card({ w: 2.2, kicker: 'In production', small: `Films for ${folder.title} are being produced and will appear here.`, align: 'center', bg: 'rgba(5,8,7,0.82)' });
+    const cm = new THREE.Mesh(new THREE.PlaneGeometry(c.w, c.h), new THREE.MeshBasicMaterial({ map: canvasTex(c.cv), transparent: true, depthWrite: false }));
+    g.add(place(cm, 0, 3.6, 2.2));
+  }
+  const bar = new THREE.Group(); bar.position.set(0, 0.95, -2.05); bar.rotation.set(-0.3, 0, 0); g.add(bar);
+  const btns = [], addBtn = (label, w, fn, x) => { const b = detach(navButton(label, w, fn, x)); bar.add(b); btns.push(b); };
+  if (folder) {
+    addBtn('◀  ALL FOLDERS', 0.66, () => openFolder(null), pages > 1 ? -0.78 : -0.42);
+    addBtn('✕  CLOSE GALLERY', 0.74, () => closeFilms(), pages > 1 ? 0.0 : 0.38);
+    if (pages > 1) addBtn('MORE  ▶', 0.42, () => { galleryPage = (galleryPage + 1) % pages; refreshGallery(); }, 0.68);
+  } else addBtn('◀  BACK TO PRESENTATION', 1.06, () => closeFilms(), 0);
+  if (token !== galleryToken) { sceneClickables = saved; return; } // a newer view was requested meanwhile
+  if (galleryView) gallery.remove(galleryView);
+  gallery.add(g); galleryView = g; galleryClickables = [...sceneClickables, ...btns]; sceneClickables = saved;
 }
+async function refreshGallery() { await tween(200, k => fader.material.opacity = Math.max(fader.material.opacity, k * 0.85)); await buildGalleryView(); setHover(null); tween(300, k => fader.material.opacity = 0.85 * (1 - k)); }
+function openFolder(id) { galleryFolder = id; galleryPage = 0; try { history.replaceState(null, '', '#gallery' + (id ? '-' + id : '')); } catch (e) {} return refreshGallery(); }
 let mode = 'off', hiddenObjs = [], filmWasPlaying = false;
 const fadeOut = () => tween(380, k => fader.material.opacity = Math.max(fader.material.opacity, k));
 const fadeIn = (d = 150) => tween(650, k => fader.material.opacity = 1 - k, d);
 function restoreHidden() { hiddenObjs.forEach(o => o.visible = true); hiddenObjs = []; }
-function showGalleryState() { restoreHidden(); hiddenObjs = [stage, nav]; stage.visible = false; nav.visible = false; theatre.visible = false; gallery.visible = true; mode = 'gallery'; setHover(null); yaw = 0; pitch = 0; try { history.replaceState(null, '', '#films'); } catch (e) {} }
-async function openFilms() {
+function showGalleryState() { restoreHidden(); hiddenObjs = [stage, nav]; stage.visible = false; nav.visible = false; theatre.visible = false; gallery.visible = true; mode = 'gallery'; setHover(null); yaw = 0; pitch = 0; try { history.replaceState(null, '', '#gallery' + (galleryFolder ? '-' + galleryFolder : '')); } catch (e) {} }
+async function openGallery() {
   if (mode !== 'off' || busy) return;
   if (countdown) cancelCountdown(false);
-  const ready = buildGallery(); await fadeOut(); await ready;
+  galleryFolder = null; galleryPage = 0;
+  const ready = buildGalleryView(); await fadeOut(); await ready;
   filmWasPlaying = !film.paused; showGalleryState(); fadeIn();
 }
 async function playFilm(i) {
@@ -728,7 +754,7 @@ async function playFilm(i) {
 }
 async function toGallery() {
   if (mode !== 'play') return;
-  await fadeOut(); vfilm.pause(); await buildGallery(); showGalleryState(); if (filmWasPlaying) startFilm(); fadeIn();
+  await fadeOut(); vfilm.pause(); if (!galleryView) await buildGalleryView(); showGalleryState(); if (filmWasPlaying) startFilm(); fadeIn();
 }
 async function closeFilms() {
   if (mode === 'off') return;
@@ -739,7 +765,7 @@ async function closeFilms() {
 }
 vfilm.addEventListener('ended', () => toGallery());
 vfilm.addEventListener('error', () => { if (mode === 'play') { toGallery(); note('That film could not load here. The films play on the hosted site.'); } });
-window.__films = openFilms; window.__play = playFilm; window.__toGallery = toGallery; window.__closeFilms = closeFilms;
+window.__films = openGallery; window.__folder = openFolder; window.__play = playFilm; window.__toGallery = toGallery; window.__closeFilms = closeFilms;
 function targets() { return mode === 'play' ? theatreClickables.filter(o => o.visible) : mode === 'gallery' ? galleryClickables : [...clickables, ...sceneClickables]; }
 const counter = (() => { const cv = document.createElement('canvas'); cv.width = 1.6 * NPX; cv.height = 0.1 * NPX; const t = canvasTex(cv);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 20; m.position.y = -0.15; nav.add(m);
@@ -782,7 +808,7 @@ el.addEventListener('pointermove', e => {
 el.addEventListener('pointerup', e => { if (drag && !drag.moved) { const o = screenPick(e); o?.userData.onClick?.(); } drag = null; });
 addEventListener('keydown', e => {
   if (mode !== 'off') { if (['Escape', 'Backspace', 'ArrowLeft', 'm', 'M'].includes(e.key)) { e.preventDefault(); mode === 'play' ? toGallery() : closeFilms(); } if (e.key === 'Home' || e.key === '0') goHome(); if (mode === 'play') { if ((e.key === 's' || e.key === 'S') && mute360.visible) mute360.userData.onClick(); if (e.key === ' ') { e.preventDefault(); pauseBtn.userData.onClick(); } } if (e.key === 'h' || e.key === 'H') { yaw = 0; pitch = 0; } return; }
-  if (e.key === 'v' || e.key === 'V') openFilms();
+  if (e.key === 'v' || e.key === 'V' || e.key === 'g' || e.key === 'G') openGallery();
   if (['ArrowRight', 'PageDown', ' ', 'Enter', 'ArrowDown'].includes(e.key)) { e.preventDefault(); step(1); }
   if (['ArrowLeft', 'PageUp', 'Backspace', 'ArrowUp'].includes(e.key)) { e.preventDefault(); step(-1); }
   if (e.key === 'm' || e.key === 'M' || e.key === 'Escape') go('menu');
@@ -833,7 +859,7 @@ renderer.setAnimationLoop(() => {
     navYaw = 0; navFollow = false;
   } else if (recenterPending) recenterPending = false;
   // menu bar: fixed in place at the bottom of the presentation, straight ahead (it no longer follows the head)
-  nav.position.set(0, 0.95, -2.05); nav.rotation.set(-0.3, 0, 0);
+  nav.position.set(-0.1, 0.95, -2.05); nav.rotation.set(-0.3, 0, 0); // bar spans HOME … GALLERY, centred
   if (xr) {
     let any = null;
     for (const c of ctrls) { tmpM.identity().extractRotation(c.matrixWorld); org.setFromMatrixPosition(c.matrixWorld); dir.set(0, 0, -1).applyMatrix4(tmpM);
